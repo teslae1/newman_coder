@@ -2,7 +2,7 @@
 const fs = require("fs"); // Or `import fs from "fs";` with ESM
 
 require('../lib/node-version-check'); // @note that this should not respect CLI --silent
-
+const testHandler = require('../lib/testHandler')
 
 const _ = require('lodash'),
     waterfall = require('async/waterfall'),
@@ -64,49 +64,53 @@ program
     .option('--export-cookie-jar <path>', 'Exports the cookie jar to a file after completing the run')
     .option('--verbose', 'Show detailed information of collection run and each request sent')
     .action((command) => {
-        var testDir = getTestDir();
+        var testDir = testHandler.getTestDir();
         if (!fs.existsSync(testDir)) {
             console.warn("No test directory found, use the 'test_init' to create this directory");
             return;
         }
 
-        let options = util.commanderToObject(command),
+        var collections = testHandler.getTestCollections();
+        if (collections.length < 1) {
+            console.warn("No tests found at dir: " + testDir);
+            return;
+        }
+        collections.forEach((collection) => {
+            let options = util.commanderToObject(command),
 
-            // parse custom reporter options
-            reporterOptions = util.parseNestedOptions(program._originalArgs, '--reporter-', options.reporters);
+                // parse custom reporter options
+                reporterOptions = util.parseNestedOptions(program._originalArgs, '--reporter-', options.reporters);
 
-        // Inject additional properties into the options object
-        options.collection = collection;
-        options.reporterOptions = reporterOptions._generic;
-        options.reporter = _.transform(_.omit(reporterOptions, '_generic'), (acc, value, key) => {
-            acc[key] = _.assignIn(value, reporterOptions._generic); // overrides reporter options with _generic
-        }, {});
+            // Inject additional properties into the options object
+            options.collection = collection;
+            options.reporterOptions = reporterOptions._generic;
+            options.reporter = _.transform(_.omit(reporterOptions, '_generic'), (acc, value, key) => {
+                acc[key] = _.assignIn(value, reporterOptions._generic); // overrides reporter options with _generic
+            }, {});
 
-        newman.run(options, function (err, summary) {
-            const runError = err || summary.run.error || summary.run.failures.length;
+            newman.run(options, function (err, summary) {
+                const runError = err || summary.run.error || summary.run.failures.length;
 
-            if (err) {
-                console.error(`error: ${err.message || err}\n`);
-                err.friendly && console.error(`  ${err.friendly}\n`);
-            }
-            runError && !_.get(options, 'suppressExitCode') && (process.exitCode = 1);
+                if (err) {
+                    console.error(`error: ${err.message || err}\n`);
+                    err.friendly && console.error(`  ${err.friendly}\n`);
+                }
+                runError && !_.get(options, 'suppressExitCode') && (process.exitCode = 1);
+            });
         });
+
     });
 
 program.command("test_init")
     .action((command) => {
         var testDir = getTestDir();
-        if(fs.existsSync(testDir)){
+        if (fs.existsSync(testDir)) {
             return;
         }
 
         fs.mkdirSync(testDir);
     });
 
-function getTestDir() {
-    var cwd = process.cwd();
-    return cwd + "\\newmantests";
-}
 
 // The `run` command allows you to specify a collection to be run with the provided options.
 program
