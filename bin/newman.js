@@ -1,6 +1,8 @@
 #!/usr/bin/env node
+const fs = require("fs"); // Or `import fs from "fs";` with ESM
 
 require('../lib/node-version-check'); // @note that this should not respect CLI --silent
+
 
 const _ = require('lodash'),
     waterfall = require('async/waterfall'),
@@ -62,8 +64,11 @@ program
     .option('--export-cookie-jar <path>', 'Exports the cookie jar to a file after completing the run')
     .option('--verbose', 'Show detailed information of collection run and each request sent')
     .action((command) => {
-        var cwd = process.cwd();
-        console.log("We are going");
+        var testDir = getTestDir();
+        if (!fs.existsSync(testDir)) {
+            console.warn("No test directory found, use the 'test_init' to create this directory");
+            return;
+        }
 
         let options = util.commanderToObject(command),
 
@@ -87,6 +92,21 @@ program
             runError && !_.get(options, 'suppressExitCode') && (process.exitCode = 1);
         });
     });
+
+program.command("test_init")
+    .action((command) => {
+        var testDir = getTestDir();
+        if(fs.existsSync(testDir)){
+            return;
+        }
+
+        fs.mkdirSync(testDir);
+    });
+
+function getTestDir() {
+    var cwd = process.cwd();
+    return cwd + "\\newmantests";
+}
 
 // The `run` command allows you to specify a collection to be run with the provided options.
 program
@@ -175,7 +195,7 @@ program.on('command:*', (command) => {
  * @param {String[]} argv - Argument vector.
  * @param {?Function} callback - The callback function invoked on the completion of execution.
  */
-function run (argv, callback) {
+function run(argv, callback) {
     waterfall([
         (next) => {
             // cache original argv, required to parse nested options later.
