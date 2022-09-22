@@ -142,7 +142,7 @@ function newmanRunRecursive(collSequence, command) {
 
 program.command("init")
     .action((command) => {
-        var testDir = getTestDir();
+        var testDir = testHandler.getTestDir();
         if (fs.existsSync(testDir)) {
             return;
         }
