@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const { Console } = require("console");
 const fs = require("fs"); // Or `import fs from "fs";` with ESM
 
 require('../lib/node-version-check'); // @note that this should not respect CLI --silent
@@ -13,7 +14,7 @@ const _ = require('lodash'),
     util = require('./util');
 
 program
-    .name('newman')
+    .name('coman')
     .addHelpCommand(false)
     .version(version, '-v, --version');
 // 
@@ -66,42 +67,49 @@ program
     .action((command) => {
         var testDir = testHandler.getTestDir();
         if (!fs.existsSync(testDir)) {
-            console.warn("No test directory found, use the 'test_init' to create this directory");
+            console.warn("No test directory found, use the 'init' to create this directory");
             return;
         }
 
-        var collections = testHandler.getTestCollections();
-        if (collections.length < 1) {
+        var collSequence = testHandler.getCollectionSequence();
+        if (collSequence == undefined) {
             console.warn("No tests found at dir: " + testDir);
             return;
         }
-        collections.forEach((collection) => {
-            let options = util.commanderToObject(command),
-
-                // parse custom reporter options
-                reporterOptions = util.parseNestedOptions(program._originalArgs, '--reporter-', options.reporters);
-
-            // Inject additional properties into the options object
-            options.collection = collection;
-            options.reporterOptions = reporterOptions._generic;
-            options.reporter = _.transform(_.omit(reporterOptions, '_generic'), (acc, value, key) => {
-                acc[key] = _.assignIn(value, reporterOptions._generic); // overrides reporter options with _generic
-            }, {});
-
-            newman.run(options, function (err, summary) {
-                const runError = err || summary.run.error || summary.run.failures.length;
-
-                if (err) {
-                    console.error(`error: ${err.message || err}\n`);
-                    err.friendly && console.error(`  ${err.friendly}\n`);
-                }
-                runError && !_.get(options, 'suppressExitCode') && (process.exitCode = 1);
-            });
-        });
-
+        newmanRunRecursive(collSequence, command);
     });
 
-program.command("test_init")
+function newmanRunRecursive(collSequence, command) {
+    let collection = collSequence.collection;
+    let options = util.commanderToObject(command),
+
+        // parse custom reporter options
+        reporterOptions = util.parseNestedOptions(program._originalArgs, '--reporter-', options.reporters);
+
+    // Inject additional properties into the options object
+    options.collection = collection;
+    options.reporterOptions = reporterOptions._generic;
+    options.reporter = _.transform(_.omit(reporterOptions, '_generic'), (acc, value, key) => {
+        acc[key] = _.assignIn(value, reporterOptions._generic); // overrides reporter options with _generic
+    }, {});
+
+    newman.run(options, function (err, summary) {
+        const runError = err || summary.run.error || summary.run.failures.length;
+
+        if (err) {
+            console.error(`error: ${err.message || err}\n`);
+            err.friendly && console.error(`  ${err.friendly}\n`);
+        }
+        runError && !_.get(options, 'suppressExitCode') && (process.exitCode = 1);
+        if (collSequence.next == undefined) {
+            return;
+        }
+
+        newmanRunRecursive(collSequence.next, command);
+    });
+}
+
+program.command("init")
     .action((command) => {
         var testDir = getTestDir();
         if (fs.existsSync(testDir)) {
