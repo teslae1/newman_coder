@@ -75,13 +75,8 @@ program
 
         let options = util.commanderToObject(command);
         var singleCollection = options.single;
-        if(singleCollection != null){
-            let singleSequence = testHandler.getSingleSequence(singleCollection);
-            if(singleSequence == null){
-                console.warn("No collection dir found at testdir path: " + testDir + "\\" + singleCollection);
-                return;
-            }
-            newmanRunRecursive(singleSequence, command);
+        if (singleCollection != null) {
+            handleSingleCollectionRun(singleCollection, command, testDir);
             return;
         }
 
@@ -92,6 +87,15 @@ program
         }
         newmanRunRecursive(collSequence, command);
     });
+
+function handleSingleCollectionRun(singleCollection, command, testDir) {
+    let singleSequence = testHandler.getSingleSequence(singleCollection);
+    if (singleSequence == null) {
+        console.warn("No collection dir found at testdir path: " + testDir + "\\" + singleCollection);
+        return;
+    }
+    newmanRunRecursive(singleSequence, command);
+}
 
 function newmanRunRecursive(collSequence, command) {
     let collection = collSequence.collection;
