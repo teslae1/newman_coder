@@ -17,12 +17,13 @@ program
     .name('coman')
     .addHelpCommand(false)
     .version(version, '-v, --version');
-// 
+
 
 program
     .command('test')
     .description('Initiate a Postman Collection run from a given URL or path')
     .usage('<collection> [options]')
+    .option('-s, --single <collectionDir>', 'Specify the single collection to run tests')
     .option('-e, --environment <path>', 'Specify a URL or path to a Postman Environment')
     .option('-g, --globals <path>', 'Specify a URL or path to a file containing Postman Globals')
     .option('-r, --reporters [reporters]', 'Specify the reporters to use for this run', util.cast.csvParse, ['cli'])
@@ -65,13 +66,26 @@ program
     .option('--export-cookie-jar <path>', 'Exports the cookie jar to a file after completing the run')
     .option('--verbose', 'Show detailed information of collection run and each request sent')
     .action((command) => {
-        var testDir = testHandler.getTestDir();
+
+        let testDir = testHandler.getTestDir();
         if (!fs.existsSync(testDir)) {
             console.warn("No test directory found, use the 'init' to create this directory");
             return;
         }
 
-        var collSequence = testHandler.getCollectionSequence();
+        let options = util.commanderToObject(command);
+        var singleCollection = options.single;
+        if(singleCollection != null){
+            let singleSequence = testHandler.getSingleSequence(singleCollection);
+            if(singleSequence == null){
+                console.warn("No collection dir found at testdir path: " + testDir + "\\" + singleCollection);
+                return;
+            }
+            newmanRunRecursive(singleSequence, command);
+            return;
+        }
+
+        let collSequence = testHandler.getCollectionSequence();
         if (collSequence == undefined) {
             console.warn("No tests found at dir: " + testDir);
             return;
@@ -93,6 +107,8 @@ function newmanRunRecursive(collSequence, command) {
         acc[key] = _.assignIn(value, reporterOptions._generic); // overrides reporter options with _generic
     }, {});
 
+    console.log("Running collection: '" + collSequence.name + "'")
+    console.log("At : '" + collSequence.collection + "'")
     newman.run(options, function (err, summary) {
         const runError = err || summary.run.error || summary.run.failures.length;
 
