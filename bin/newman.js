@@ -14,9 +14,19 @@ const _ = require('lodash'),
     util = require('./util');
 
 program
-    .name('coman')
+    .name('fileman')
     .addHelpCommand(false)
     .version(version, '-v, --version');
+
+program
+    .command('getfiles <collection>')
+    .usage("<collection> [options]")
+    .description("Converts collection to files and pastes into the ")
+    .option("-d, --destination <destination>","Specify the destination directory")
+    .action((collection, command) => {
+        let options = util.commanderToObject(command);
+        testHandler.getFiles(collection, options.destination);
+    });
 
 
 program
@@ -81,6 +91,7 @@ program
         }
 
         let collSequence = testHandler.getCollectionSequence();
+        console.log(collSequence);
         if (collSequence == undefined) {
             console.warn("No tests found at dir: " + testDir);
             return;
