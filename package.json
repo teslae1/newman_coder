@@ -19,7 +19,7 @@
   ],
   "main": "index.js",
   "bin": {
-    "fileman": "./bin/newman.js"
+    "coman": "./bin/newman.js"
   },
   "preferGlobal": true,
   "scripts": {
