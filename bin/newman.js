@@ -78,10 +78,6 @@ program
     .action((command) => {
 
         let testDir = testHandler.getTestDir();
-        if (!fs.existsSync(testDir)) {
-            console.warn("No test directory found, use the 'init' to create this directory");
-            return;
-        }
 
         let options = util.commanderToObject(command);
         var singleCollection = options.single;
@@ -139,6 +135,11 @@ function newmanRunRecursive(collSequence, command) {
         newmanRunRecursive(collSequence.next, command);
     });
 }
+
+program.command("example")
+    .action((command) => {
+        testHandler.exportExampleAtTestDir();
+    });
 
 program.command("build")
     .action((command) => {
