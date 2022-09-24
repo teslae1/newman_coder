@@ -140,6 +140,11 @@ function newmanRunRecursive(collSequence, command) {
     });
 }
 
+program.command("build")
+    .action((command) => {
+        testHandler.buildCollections();
+    });
+
 program.command("init")
     .action((command) => {
         var testDir = testHandler.getTestDir();
