@@ -33,6 +33,7 @@ program
     .command('test')
     .description('Initiate a Postman Collection run from a given URL or path')
     .usage('<collection> [options]')
+    .option('-iw, --ignorewait', 'Sets all javascript test calls to setTimeout equal to 0 ms')
     .option('-s, --single <collectionDir>', 'Specify the single collection to run tests')
     .option('-e, --environment <path>', 'Specify a URL or path to a Postman Environment')
     .option('-g, --globals <path>', 'Specify a URL or path to a file containing Postman Globals')
@@ -80,13 +81,15 @@ program
         let testDir = testHandler.getTestDir();
 
         let options = util.commanderToObject(command);
+        let ignoreWaitsArg = options.ignorewait;
+        let shouldIgnoreWait = ignoreWaitsArg != null;
         var singleCollection = options.single;
         if (singleCollection != null) {
-            handleSingleCollectionRun(singleCollection, command, testDir);
+            handleSingleCollectionRun(singleCollection, command, testDir, shouldIgnoreWait);
             return;
         }
 
-        let collSequence = testHandler.getCollectionSequence();
+        let collSequence = testHandler.getCollectionSequence(shouldIgnoreWait);
         console.log(collSequence);
         if (collSequence == undefined) {
             console.warn("No tests found at dir: " + testDir);
@@ -95,8 +98,8 @@ program
         newmanRunRecursive(collSequence, command);
     });
 
-function handleSingleCollectionRun(singleCollection, command, testDir) {
-    let singleSequence = testHandler.getSingleSequence(singleCollection);
+function handleSingleCollectionRun(singleCollection, command, testDir, shouldIgnoreWait) {
+    let singleSequence = testHandler.getSingleSequence(singleCollection, shouldIgnoreWait);
     if (singleSequence == null) {
         console.warn("No collection dir found at testdir path: " + testDir + "\\" + singleCollection);
         return;
